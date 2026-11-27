@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 from decimal import Decimal
 from unittest.mock import patch
@@ -6,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from .dashboard_data import (
@@ -14,11 +13,6 @@ from .dashboard_data import (
     load_dashboard_data,
 )
 from .energy_forecaster import ForecastUnavailableError
-from .gemini_analysis import (
-    GeminiAnalysisError,
-    analyze_forecast_with_gemini,
-    analyze_with_gemini,
-)
 from .models import EnergyHistoryRecord
 
 
@@ -213,83 +207,14 @@ class ApplicationRouteTests(TestCase):
         self.assertContains(response, 'python manage.py train_energy_model')
         self.assertContains(response, '— <span>kW</span>')
 
-    @override_settings(GEMINI_API_KEY='test-api-key')
-    @patch('energy_app.views.is_model_trained', return_value=True)
-    @patch(
-        'energy_app.views.predict_active_power',
-        return_value={'prediction': 1.234, 'mae': 0.2},
-    )
-    @patch(
-        'energy_app.views.analyze_with_gemini',
-        return_value={
-            'summary': 'Estimasi ini merupakan perkiraan.',
-            'input_analysis': 'Model menggunakan seluruh nilai masukan.',
-            'model_accuracy': 'MAE adalah rata-rata galat pada data uji.',
-            'recommendation': 'Pantau penggunaan listrik secara berkala.',
-        },
-    )
-    def test_ai_analysis_button_uses_gemini(
-        self,
-        analyze_with_gemini,
-        predict_active_power,
-        is_model_trained,
-    ):
-        response = self.client.post(
-            reverse('estimation'),
-            {
-                'action': 'analyze',
-                'global_reactive_power': '0.120',
-                'voltage': '240.00',
-                'sub_metering_1': '1',
-                'sub_metering_2': '2',
-                'sub_metering_3': '3',
-            },
-        )
+    def test_analysis_ai_controls_are_absent(self):
+        for route_name in ('estimation', 'prediction'):
+            with self.subTest(route=route_name):
+                response = self.client.get(reverse(route_name))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Analisis AI')
-        self.assertContains(response, 'Analisis Gemini')
-        self.assertContains(response, 'Estimasi ini merupakan perkiraan.')
-        self.assertContains(response, 'Analisis masukan')
-        self.assertContains(response, 'Pantau penggunaan listrik secara berkala.')
-        self.assertContains(response, 'dikirim ke Google Gemini')
-        analyze_with_gemini.assert_called_once_with(
-            {
-                'global_reactive_power': Decimal('0.120'),
-                'voltage': Decimal('240.00'),
-                'sub_metering_1': Decimal('1'),
-                'sub_metering_2': Decimal('2'),
-                'sub_metering_3': Decimal('3'),
-            },
-            1.234,
-            0.2,
-        )
-
-    @override_settings(GEMINI_API_KEY='')
-    @patch('energy_app.views.is_model_trained', return_value=True)
-    @patch(
-        'energy_app.views.predict_active_power',
-        return_value={'prediction': 1.234, 'mae': 0.2},
-    )
-    def test_gemini_button_is_hidden_without_api_key(
-        self,
-        predict_active_power,
-        is_model_trained,
-    ):
-        response = self.client.post(
-            reverse('estimation'),
-            {
-                'global_reactive_power': '0.120',
-                'voltage': '240.00',
-                'sub_metering_1': '1',
-                'sub_metering_2': '2',
-                'sub_metering_3': '3',
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Atur GEMINI_API_KEY')
-        self.assertNotContains(response, 'Analisis AI')
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, 'Analisis AI')
+                self.assertNotContains(response, 'Gemini')
 
 
 class HistoryDetailViewTests(TestCase):
@@ -458,91 +383,6 @@ class DashboardDataTests(TestCase):
             load_dashboard_data()
 
 
-class GeminiAnalysisServiceTests(TestCase):
-    @override_settings(
-        GEMINI_API_KEY='test-api-key',
-        GEMINI_MODEL='test-gemini-model',
-        GEMINI_FALLBACK_MODEL='',
-    )
-    @patch('energy_app.gemini_analysis.genai.Client')
-    def test_analysis_uses_configured_gemini_model_and_closes_client(
-        self,
-        client_factory,
-    ):
-        client = client_factory.return_value
-        client.models.generate_content.return_value.text = (
-            json.dumps(
-                {
-                    'summary': 'Estimasi ini merupakan perkiraan.',
-                    'input_analysis': 'Semua masukan telah dianalisis.',
-                    'model_accuracy': 'MAE adalah rata-rata galat data uji.',
-                    'recommendation': 'Pantau penggunaan listrik.',
-                }
-            )
-        )
-
-        result = analyze_with_gemini(
-            {
-                'global_reactive_power': Decimal('0.120'),
-                'voltage': Decimal('240.00'),
-                'sub_metering_1': Decimal('1'),
-                'sub_metering_2': Decimal('2'),
-                'sub_metering_3': Decimal('3'),
-            },
-            1.234,
-            0.2,
-        )
-
-        self.assertEqual(
-            result['summary'],
-            'Estimasi ini merupakan perkiraan.',
-        )
-        request = client.models.generate_content.call_args.kwargs
-        self.assertEqual(request['model'], 'test-gemini-model')
-        self.assertIn('"estimasi_daya_aktif_kw": 1.234', request['contents'])
-        self.assertEqual(
-            request['config'].response_mime_type,
-            'application/json',
-        )
-        self.assertEqual(request['config'].max_output_tokens, 1400)
-        client_factory.assert_called_once_with(api_key='test-api-key')
-        client.close.assert_called_once_with()
-
-    @override_settings(
-        GEMINI_API_KEY='test-api-key',
-        GEMINI_MODEL='test-gemini-model',
-        GEMINI_FALLBACK_MODEL='',
-    )
-    @patch('energy_app.gemini_analysis.genai.Client')
-    def test_forecast_analysis_uses_chart_series_and_validates_fields(
-        self,
-        client_factory,
-    ):
-        client = client_factory.return_value
-        client.models.generate_content.return_value.text = json.dumps(
-            {
-                'summary': 'Proyeksi 24 jam mencapai 40,823 kWh.',
-                'historical_pattern': 'Daya historis tercatat 0,367 kW.',
-                'forecast_pattern': 'Prediksi per jam menunjukkan 1,701 kW.',
-                'model_accuracy': 'MAE uji model sebesar 0,328 kW.',
-                'recommendation': 'Bandingkan pola ini dengan pemakaian aktual.',
-            }
-        )
-
-        result = analyze_forecast_with_gemini(FORECAST_RESULT)
-
-        self.assertEqual(result['summary'], 'Proyeksi 24 jam mencapai 40,823 kWh.')
-        prompt = client.models.generate_content.call_args.kwargs['contents']
-        self.assertIn('"dataset_latest_observation": "13/12/2008 21:00"', prompt)
-        self.assertIn('"forecast_total_energy_kwh": 40.823', prompt)
-        prompt_data = json.loads(prompt.rsplit('\n', 1)[-1])
-        self.assertEqual(
-            prompt_data['predicted_hourly_power_kw'],
-            [{'time': '13/12 22:00', 'power_kw': 1.701}],
-        )
-        client.close.assert_called_once_with()
-
-
 class PredictionViewTests(TestCase):
     @patch('energy_app.views.is_forecast_model_trained', return_value=True)
     @patch(
@@ -577,38 +417,6 @@ class PredictionViewTests(TestCase):
         self.assertContains(history_response, '40,823 kWh')
         self.assertContains(history_response, '13/12/2008 21:00')
 
-    @override_settings(GEMINI_API_KEY='test-api-key')
-    @patch('energy_app.views.is_forecast_model_trained', return_value=True)
-    @patch('energy_app.views.forecast_energy', return_value=FORECAST_RESULT)
-    @patch(
-        'energy_app.views.analyze_forecast_with_gemini',
-        return_value={
-            'summary': 'Prediksi energi untuk 24 jam.',
-            'historical_pattern': 'Pola historis terlihat stabil.',
-            'forecast_pattern': 'Daya diprediksi meningkat.',
-            'model_accuracy': 'MAE uji sebesar 0,328 kW.',
-            'recommendation': 'Pantau jam dengan daya tertinggi.',
-        },
-    )
-    def test_forecast_ai_analysis_is_shown_on_the_chart(
-        self,
-        analyze_forecast_with_gemini,
-        forecast_energy,
-        is_forecast_model_trained,
-    ):
-        response = self.client.post(
-            reverse('prediction'),
-            {'horizon': '24', 'action': 'analyze'},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Analisis AI Gemini')
-        self.assertContains(response, 'Pola historis terlihat stabil.')
-        self.assertContains(response, 'Ringkasan data grafik dikirim ke Google Gemini')
-        analyze_forecast_with_gemini.assert_called_once_with(FORECAST_RESULT)
-        forecast_energy.assert_called_once_with(24)
-        self.assertEqual(EnergyHistoryRecord.objects.count(), 0)
-
     @patch('energy_app.views.is_forecast_model_trained', return_value=False)
     @patch(
         'energy_app.views.forecast_energy',
@@ -629,44 +437,3 @@ class PredictionViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'python manage.py train_energy_forecast')
         self.assertContains(response, '— <span>kWh</span>')
-
-    @override_settings(GEMINI_API_KEY='')
-    def test_analysis_fails_clearly_when_api_key_is_missing(self):
-        with self.assertRaisesMessage(
-            GeminiAnalysisError,
-            'GEMINI_API_KEY belum diatur pada file .env.',
-        ):
-            analyze_with_gemini({}, 1.234, 0.2)
-
-    @override_settings(
-        GEMINI_API_KEY='test-api-key',
-        GEMINI_MODEL='test-gemini-model',
-        GEMINI_FALLBACK_MODEL='',
-    )
-    @patch('energy_app.gemini_analysis.genai.Client')
-    def test_analysis_rejects_truncated_or_invalid_gemini_response(
-        self,
-        client_factory,
-    ):
-        client = client_factory.return_value
-        client.models.generate_content.return_value.text = (
-            '{"summary":"Estimasi","input_analysis":'
-        )
-
-        with self.assertRaisesMessage(
-            GeminiAnalysisError,
-            'Respons Gemini belum lengkap atau tidak sesuai format.',
-        ):
-            analyze_with_gemini(
-                {
-                    'global_reactive_power': Decimal('0.120'),
-                    'voltage': Decimal('240.00'),
-                    'sub_metering_1': Decimal('1'),
-                    'sub_metering_2': Decimal('2'),
-                    'sub_metering_3': Decimal('3'),
-                },
-                1.234,
-                0.2,
-            )
-
-        client.close.assert_called_once_with()

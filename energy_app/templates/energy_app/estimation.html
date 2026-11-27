@@ -64,32 +64,6 @@
             <p class="result-label">Estimasi Daya Aktif Global</p>
             <h2 class="result-value" id="estimation-result-title">{% if estimate_result is not None %}{{ estimate_result|floatformat:3 }}{% else %}—{% endif %} <span>kW</span></h2>
             <p class="result-description">{% if estimate_result is not None %}Estimasi dari model terlatih untuk parameter yang dimasukkan.{% elif model_ready %}Masukkan parameter lalu pilih Estimasi Energi untuk melihat hasil.{% else %}Latih model dari dataset agar hasil estimasi dapat ditampilkan.{% endif %}</p>
-            {% if estimate_result is not None %}
-            {% if gemini_configured %}
-            <button class="analysis-button" type="submit" name="action" value="analyze" form="estimation-form">
-                <i class="bi bi-stars" aria-hidden="true"></i>
-                Analisis AI
-            </button>
-            <p class="analysis-caption">Data input dan hasil estimasi dikirim ke Google Gemini.</p>
-            {% else %}
-            <p class="analysis-caption">Atur GEMINI_API_KEY pada file .env untuk menggunakan analisis Gemini.</p>
-            {% endif %}
-            {% endif %}
-            {% if ai_analysis %}
-            <div class="analysis-result" role="status" aria-live="polite">
-                <strong>Analisis Gemini</strong>
-                <p><strong>Ringkasan</strong><br>{{ ai_analysis.summary }}</p>
-                <p><strong>Analisis masukan</strong><br>{{ ai_analysis.input_analysis }}</p>
-                <p><strong>Akurasi model</strong><br>{{ ai_analysis.model_accuracy }}</p>
-                <p><strong>Rekomendasi</strong><br>{{ ai_analysis.recommendation }}</p>
-            </div>
-            {% endif %}
-            {% if analysis_error %}
-            <div class="analysis-result analysis-error" role="alert">
-                <strong>Analisis belum berhasil</strong>
-                <p>{{ analysis_error }}</p>
-            </div>
-            {% endif %}
         </section>
 
         <section class="tool-card input-summary-card" aria-labelledby="input-summary-title">

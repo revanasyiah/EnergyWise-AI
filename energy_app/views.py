@@ -1,6 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.conf import settings
 from django.shortcuts import get_object_or_404, render
 from django.utils.formats import date_format, number_format
 
@@ -15,11 +14,6 @@ from .energy_forecaster import (
     is_forecast_model_trained,
 )
 from .forms import CostEstimateForm, EstimationInputForm, PredictionHorizonForm
-from .gemini_analysis import (
-    GeminiAnalysisError,
-    analyze_forecast_with_gemini,
-    analyze_with_gemini,
-)
 from .models import EnergyHistoryRecord
 
 
@@ -94,8 +88,6 @@ def estimation(request):
     input_summary = None
     status_message = None
     estimate_result = None
-    ai_analysis = None
-    analysis_error = None
     model_ready = is_model_trained()
 
     if request.method == 'POST' and form.is_valid():
@@ -106,40 +98,27 @@ def estimation(request):
             status_message = str(error)
         else:
             estimate_result = result['prediction']
-            if request.POST.get('action') != 'analyze':
-                EnergyHistoryRecord.objects.create(
-                    prediction_type=EnergyHistoryRecord.RecordType.ESTIMATION,
-                    input_summary=(
-                        f'Reaktif {number_format(input_summary["global_reactive_power"], decimal_pos=3)} kW; '
-                        f'tegangan {number_format(input_summary["voltage"], decimal_pos=2)} V; '
-                        f'submeter {number_format(input_summary["sub_metering_1"], decimal_pos=2)}, '
-                        f'{number_format(input_summary["sub_metering_2"], decimal_pos=2)}, '
-                        f'{number_format(input_summary["sub_metering_3"], decimal_pos=2)}'
-                    ),
-                    result_value=Decimal(str(estimate_result)),
-                    result_unit='kW',
-                    details=(
-                        f'MAE model pada data uji: '
-                        f'{number_format(result["mae"], decimal_pos=3)} kW.'
-                    ),
-                )
-            if request.POST.get('action') == 'analyze':
-                try:
-                    ai_analysis = analyze_with_gemini(
-                        input_summary,
-                        estimate_result,
-                        result['mae'],
-                    )
-                except GeminiAnalysisError as error:
-                    analysis_error = str(error)
-                else:
-                    status_message = 'Analisis Gemini berhasil dibuat.'
-            else:
-                status_message = (
-                    f'Estimasi berhasil dibuat oleh model. '
-                    f'MAE pada data uji: {number_format(result["mae"], decimal_pos=3)} kW. '
-                    'Hasil estimasi disimpan di Riwayat Prediksi.'
-                )
+            EnergyHistoryRecord.objects.create(
+                prediction_type=EnergyHistoryRecord.RecordType.ESTIMATION,
+                input_summary=(
+                    f'Reaktif {number_format(input_summary["global_reactive_power"], decimal_pos=3)} kW; '
+                    f'tegangan {number_format(input_summary["voltage"], decimal_pos=2)} V; '
+                    f'submeter {number_format(input_summary["sub_metering_1"], decimal_pos=2)}, '
+                    f'{number_format(input_summary["sub_metering_2"], decimal_pos=2)}, '
+                    f'{number_format(input_summary["sub_metering_3"], decimal_pos=2)}'
+                ),
+                result_value=Decimal(str(estimate_result)),
+                result_unit='kW',
+                details=(
+                    f'MAE model pada data uji: '
+                    f'{number_format(result["mae"], decimal_pos=3)} kW.'
+                ),
+            )
+            status_message = (
+                f'Estimasi berhasil dibuat oleh model. '
+                f'MAE pada data uji: {number_format(result["mae"], decimal_pos=3)} kW. '
+                'Hasil estimasi disimpan di Riwayat Prediksi.'
+            )
 
     return render(
         request,
@@ -150,9 +129,6 @@ def estimation(request):
             'status_message': status_message,
             'estimate_result': estimate_result,
             'model_ready': model_ready,
-            'gemini_configured': bool(settings.GEMINI_API_KEY),
-            'ai_analysis': ai_analysis,
-            'analysis_error': analysis_error,
         },
     )
 
@@ -163,8 +139,6 @@ def prediction(request):
     selected_horizon = form['horizon'].value()
     status_message = None
     forecast_result = None
-    forecast_analysis = None
-    analysis_error = None
     forecast_model_ready = is_forecast_model_trained()
 
     if request.method == 'POST' and form.is_valid():
@@ -179,43 +153,33 @@ def prediction(request):
                 f'{forecast_result["data_as_of"]}; hasil ini bukan pembacaan rumah '
                 f'secara real-time.'
             )
-            if request.POST.get('action') != 'analyze':
-                change_percent = forecast_result['change_percent']
-                change_text = (
-                    f'{number_format(abs(change_percent), decimal_pos=1)}%'
-                    if change_percent is not None
-                    else 'tidak tersedia'
-                )
-                if change_percent is not None and change_percent > 0:
-                    change_text = f'+{change_text}'
-                elif change_percent is not None and change_percent < 0:
-                    change_text = f'-{change_text}'
+            change_percent = forecast_result['change_percent']
+            change_text = (
+                f'{number_format(abs(change_percent), decimal_pos=1)}%'
+                if change_percent is not None
+                else 'tidak tersedia'
+            )
+            if change_percent is not None and change_percent > 0:
+                change_text = f'+{change_text}'
+            elif change_percent is not None and change_percent < 0:
+                change_text = f'-{change_text}'
 
-                EnergyHistoryRecord.objects.create(
-                    prediction_type=EnergyHistoryRecord.RecordType.PREDICTION,
-                    input_summary=(
-                        f'Periode {selected_horizon} jam; data hingga '
-                        f'{forecast_result["data_as_of"]}'
-                    ),
-                    result_value=Decimal(str(forecast_result['total_kwh'])),
-                    result_unit='kWh',
-                    details=(
-                        f'Daya rata-rata: '
-                        f'{number_format(forecast_result["average_kw"], decimal_pos=3)} kW; '
-                        f'perubahan dari histori: {change_text}; '
-                        f'MAE uji: {number_format(forecast_result["mae"], decimal_pos=3)} kW.'
-                    ),
-                )
-                status_message += ' Hasil prediksi disimpan di Riwayat Prediksi.'
-            if request.POST.get('action') == 'analyze':
-                try:
-                    forecast_analysis = analyze_forecast_with_gemini(
-                        forecast_result
-                    )
-                except GeminiAnalysisError as error:
-                    analysis_error = str(error)
-                else:
-                    status_message += ' Analisis Gemini berhasil dibuat.'
+            EnergyHistoryRecord.objects.create(
+                prediction_type=EnergyHistoryRecord.RecordType.PREDICTION,
+                input_summary=(
+                    f'Periode {selected_horizon} jam; data hingga '
+                    f'{forecast_result["data_as_of"]}'
+                ),
+                result_value=Decimal(str(forecast_result['total_kwh'])),
+                result_unit='kWh',
+                details=(
+                    f'Daya rata-rata: '
+                    f'{number_format(forecast_result["average_kw"], decimal_pos=3)} kW; '
+                    f'perubahan dari histori: {change_text}; '
+                    f'MAE uji: {number_format(forecast_result["mae"], decimal_pos=3)} kW.'
+                ),
+            )
+            status_message += ' Hasil prediksi disimpan di Riwayat Prediksi.'
 
     return render(
         request,
@@ -226,9 +190,6 @@ def prediction(request):
             'status_message': status_message,
             'forecast_result': forecast_result,
             'forecast_model_ready': forecast_model_ready,
-            'gemini_configured': bool(settings.GEMINI_API_KEY),
-            'forecast_analysis': forecast_analysis,
-            'analysis_error': analysis_error,
             'chart_data': (
                 forecast_result['chart_data'] if forecast_result else None
             ),

@@ -92,39 +92,6 @@
             <span><i class="legend-dot legend-history" aria-hidden="true"></i>Historis</span>
             <span><i class="legend-dot legend-prediction" aria-hidden="true"></i>Prediksi</span>
         </div>
-        {% if forecast_result %}
-        <div class="forecast-ai-action">
-            {% if gemini_configured %}
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="horizon" value="{{ forecast_result.horizon }}">
-                <button class="primary-button forecast-ai-button" type="submit" name="action" value="analyze">
-                    <i class="bi bi-stars" aria-hidden="true"></i>
-                    Analisis AI pada Grafik
-                </button>
-            </form>
-            <p class="forecast-analysis-caption">Ringkasan data grafik dikirim ke Google Gemini untuk dianalisis.</p>
-            {% else %}
-            <p class="forecast-analysis-caption">Atur GEMINI_API_KEY di file .env untuk mengaktifkan analisis AI.</p>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% if forecast_analysis %}
-        <section class="forecast-ai-analysis" aria-label="Analisis AI konsumsi historis dan prediksi" role="status">
-            <h3><i class="bi bi-stars" aria-hidden="true"></i> Analisis AI Gemini</h3>
-            <p><strong>Ringkasan periode</strong>{{ forecast_analysis.summary }}</p>
-            <p><strong>Pola historis</strong>{{ forecast_analysis.historical_pattern }}</p>
-            <p><strong>Pola prediksi</strong>{{ forecast_analysis.forecast_pattern }}</p>
-            <p><strong>Akurasi model</strong>{{ forecast_analysis.model_accuracy }}</p>
-            <p><strong>Rekomendasi</strong>{{ forecast_analysis.recommendation }}</p>
-        </section>
-        {% endif %}
-        {% if analysis_error %}
-        <section class="forecast-ai-analysis forecast-ai-error" aria-label="Kesalahan analisis AI" role="alert">
-            <h3>Analisis AI belum berhasil</h3>
-            <p>{{ analysis_error }}</p>
-        </section>
-        {% endif %}
     </section>
 </div>
 {% if chart_data %}

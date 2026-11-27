@@ -37,14 +37,6 @@ ALLOWED_HOSTS = [
     for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
     if host.strip()
 ]
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '').strip()
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash').strip()
-GEMINI_FALLBACK_MODEL = os.getenv(
-    'GEMINI_FALLBACK_MODEL',
-    '',
-).strip()
-
-
 # Application definition
 
 INSTALLED_APPS = [

@@ -1090,67 +1090,6 @@ a {
     line-height: 1.6;
 }
 
-.analysis-button {
-    display: inline-flex;
-    min-height: 36px;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #e8f0fb;
-    font-size: 11px;
-    font-weight: 650;
-    transition: background-color 150ms ease, border-color 150ms ease;
-}
-
-.analysis-button:hover {
-    border-color: rgba(141, 224, 183, 0.65);
-    background: rgba(141, 224, 183, 0.14);
-}
-
-.analysis-button:focus-visible {
-    outline: 3px solid rgba(141, 224, 183, 0.35);
-    outline-offset: 2px;
-}
-
-.analysis-caption {
-    margin: 7px 0 0;
-    color: #aebbd0;
-    font-size: 9px;
-    text-align: center;
-}
-
-.analysis-result {
-    margin-top: 14px;
-    padding: 12px;
-    border: 1px solid rgba(141, 224, 183, 0.28);
-    border-radius: 8px;
-    background: rgba(8, 24, 45, 0.3);
-    color: #e8f0fb;
-    font-size: 10px;
-    line-height: 1.65;
-}
-
-.analysis-result strong {
-    color: #8de0b7;
-}
-
-.analysis-error {
-    border-color: rgba(248, 113, 113, 0.4);
-}
-
-.analysis-error strong {
-    color: #fecaca;
-}
-
-.analysis-result p {
-    margin: 5px 0 0;
-}
-
 .input-summary-card {
     padding: 19px;
 }
@@ -1289,67 +1228,6 @@ a {
 
 .legend-prediction {
     background: #7487b4;
-}
-
-.forecast-ai-action {
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid #edf0f4;
-}
-
-.forecast-ai-button {
-    display: flex;
-    width: 100%;
-    min-height: 40px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.forecast-analysis-caption {
-    margin: 8px 0 0;
-    color: #788396;
-    font-size: 10px;
-    line-height: 1.5;
-    text-align: center;
-}
-
-.forecast-ai-analysis {
-    margin-top: 15px;
-    padding: 16px;
-    border: 1px solid #e5eaf0;
-    border-radius: 10px;
-    background: #f8fafc;
-    color: var(--text);
-    font-size: 11px;
-    line-height: 1.65;
-}
-
-.forecast-ai-analysis h3 {
-    margin: 0 0 10px;
-    color: var(--navy);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.forecast-ai-analysis p {
-    margin: 8px 0 0;
-}
-
-.forecast-ai-analysis p strong {
-    display: block;
-    color: var(--navy);
-    font-size: 10px;
-}
-
-.forecast-ai-error {
-    border-color: #fecaca;
-    background: #fff7f7;
-    color: #991b1b;
-}
-
-.forecast-ai-error h3 {
-    color: #991b1b;
 }
 
 .prediction-feedback {
