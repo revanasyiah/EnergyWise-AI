@@ -1,0 +1,119 @@
+{% extends 'energy_app/base.html' %}
+
+{% block title %}Estimasi | EnergyWise AI{% endblock %}
+{% block breadcrumb %}Estimasi{% endblock %}
+{% block page_kicker %}ALAT ENERGI{% endblock %}
+{% block page_title %}Estimasi energi{% endblock %}
+{% block page_description %}Perkirakan daya aktif berdasarkan parameter listrik rumah tangga.{% endblock %}
+
+{% block content %}
+<div class="tool-notice" role="note">
+    <span class="tool-notice-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></span>
+    {% if model_ready %}
+    <p><strong>Model estimasi siap.</strong> Hasil dihitung menggunakan model pembelajaran mesin yang dilatih dari dataset konsumsi rumah tangga.</p>
+    {% else %}
+    <p><strong>Model estimasi belum dilatih.</strong> Jalankan <code>python manage.py train_energy_model</code> untuk melatih model dari dataset sebelum membuat estimasi.</p>
+    {% endif %}
+</div>
+
+<div class="tool-layout">
+    <section class="tool-card" aria-labelledby="estimation-form-title">
+        <div class="tool-card-heading">
+            <div>
+                <h2 id="estimation-form-title">Parameter kelistrikan</h2>
+                <p>Masukkan nilai pengukuran untuk menyiapkan estimasi.</p>
+            </div>
+            <span class="required-note"><span aria-hidden="true">*</span> Wajib diisi</span>
+        </div>
+
+        <form id="estimation-form" method="post" novalidate>
+            {% csrf_token %}
+            <div class="measurement-grid">
+                {% for field in form %}
+                <div class="measurement-field{% if field.errors %} has-error{% endif %}">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }} <span aria-hidden="true">*</span></label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="field-errors" role="alert">{{ field.errors|join:", " }}</div>
+                    {% else %}
+                        <div class="field-help">Masukkan nilai pengukuran nol atau lebih.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button class="primary-button" type="submit" name="action" value="estimate">
+                <i class="bi bi-lightning-charge" aria-hidden="true"></i>
+                Estimasi Energi
+            </button>
+        </form>
+
+        {% if status_message %}
+        <div class="form-feedback" role="status">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>{{ status_message }}</span>
+        </div>
+        {% endif %}
+    </section>
+
+    <aside class="tool-side-column">
+        <section class="result-card" aria-labelledby="estimation-result-title">
+            <div class="result-card-heading">
+                <span class="result-icon"><i class="bi bi-activity" aria-hidden="true"></i></span>
+                <span class="result-state">{% if estimate_result is not None %}HASIL MODEL{% elif model_ready %}MODEL SIAP{% else %}BELUM TERSEDIA{% endif %}</span>
+            </div>
+            <p class="result-label">Estimasi Daya Aktif Global</p>
+            <h2 class="result-value" id="estimation-result-title">{% if estimate_result is not None %}{{ estimate_result|floatformat:3 }}{% else %}—{% endif %} <span>kW</span></h2>
+            <p class="result-description">{% if estimate_result is not None %}Estimasi dari model terlatih untuk parameter yang dimasukkan.{% elif model_ready %}Masukkan parameter lalu pilih Estimasi Energi untuk melihat hasil.{% else %}Latih model dari dataset agar hasil estimasi dapat ditampilkan.{% endif %}</p>
+            {% if estimate_result is not None %}
+            {% if gemini_configured %}
+            <button class="analysis-button" type="submit" name="action" value="analyze" form="estimation-form">
+                <i class="bi bi-stars" aria-hidden="true"></i>
+                Analisis AI
+            </button>
+            <p class="analysis-caption">Data input dan hasil estimasi dikirim ke Google Gemini.</p>
+            {% else %}
+            <p class="analysis-caption">Atur GEMINI_API_KEY pada file .env untuk menggunakan analisis Gemini.</p>
+            {% endif %}
+            {% endif %}
+            {% if ai_analysis %}
+            <div class="analysis-result" role="status" aria-live="polite">
+                <strong>Analisis Gemini</strong>
+                <p><strong>Ringkasan</strong><br>{{ ai_analysis.summary }}</p>
+                <p><strong>Analisis masukan</strong><br>{{ ai_analysis.input_analysis }}</p>
+                <p><strong>Akurasi model</strong><br>{{ ai_analysis.model_accuracy }}</p>
+                <p><strong>Rekomendasi</strong><br>{{ ai_analysis.recommendation }}</p>
+            </div>
+            {% endif %}
+            {% if analysis_error %}
+            <div class="analysis-result analysis-error" role="alert">
+                <strong>Analisis belum berhasil</strong>
+                <p>{{ analysis_error }}</p>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="tool-card input-summary-card" aria-labelledby="input-summary-title">
+            <div class="tool-card-heading">
+                <div>
+                    <h2 id="input-summary-title">Ringkasan masukan</h2>
+                    <p>Nilai yang dikirim untuk estimasi ini.</p>
+                </div>
+            </div>
+            {% if input_summary %}
+            <dl class="input-summary-list">
+                <div><dt>Daya reaktif</dt><dd>{{ input_summary.global_reactive_power }} kW</dd></div>
+                <div><dt>Tegangan</dt><dd>{{ input_summary.voltage }} V</dd></div>
+                <div><dt>Submeter 1</dt><dd>{{ input_summary.sub_metering_1 }} Wh</dd></div>
+                <div><dt>Submeter 2</dt><dd>{{ input_summary.sub_metering_2 }} Wh</dd></div>
+                <div><dt>Submeter 3</dt><dd>{{ input_summary.sub_metering_3 }} Wh</dd></div>
+            </dl>
+            {% else %}
+            <div class="summary-empty">
+                <i class="bi bi-card-list" aria-hidden="true"></i>
+                <span>Kirim nilai yang valid untuk melihat ringkasan masukan di sini.</span>
+            </div>
+            {% endif %}
+        </section>
+    </aside>
+</div>
+{% endblock %}

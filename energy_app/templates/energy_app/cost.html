@@ -1,0 +1,91 @@
+{% extends 'energy_app/base.html' %}
+
+{% block title %}Estimasi Biaya | EnergyWise AI{% endblock %}
+{% block breadcrumb %}Estimasi Biaya{% endblock %}
+{% block page_kicker %}ALAT ENERGI{% endblock %}
+{% block page_title %}Estimasi biaya listrik{% endblock %}
+{% block page_description %}Perkirakan biaya listrik berdasarkan konsumsi dan tarif pilihan Anda.{% endblock %}
+
+{% block content %}
+<div class="tool-notice" role="note">
+    <span class="tool-notice-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></span>
+    <p><strong>Estimasi manual.</strong> Masukkan daya rata-rata, lama penggunaan harian, dan tarif listrik. Kalkulator ini tidak menggunakan prediksi pembelajaran mesin.</p>
+</div>
+
+<div class="cost-layout">
+    <section class="tool-card" aria-labelledby="cost-form-title">
+        <div class="tool-card-heading">
+            <div>
+                <h2 id="cost-form-title">Masukan perhitungan</h2>
+                <p>Atur daya, lama penggunaan harian, dan tarif listrik.</p>
+            </div>
+        </div>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="measurement-grid cost-input-grid">
+                {% for field in form %}
+                <div class="measurement-field{% if field.errors %} has-error{% endif %}">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }} <span aria-hidden="true">*</span></label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="field-errors" role="alert">{{ field.errors|join:", " }}</div>
+                    {% else %}
+                        <div class="field-help">
+                            {% if field.name == 'power_kw' %}Masukkan nilai daya aktif yang ingin dihitung.{% endif %}
+                            {% if field.name == 'hours_per_day' %}Masukkan nilai dari 0 hingga 24 jam.{% endif %}
+                            {% if field.name == 'tariff_per_kwh' %}Tarif listrik dalam rupiah per kWh.{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button class="primary-button" type="submit">
+                <i class="bi bi-calculator" aria-hidden="true"></i>
+                Hitung biaya
+            </button>
+        </form>
+    </section>
+
+    <section class="cost-results" aria-labelledby="cost-results-title">
+        <article class="result-card cost-monthly-result">
+            <div class="result-card-heading">
+                <span class="result-icon"><i class="bi bi-calendar-month" aria-hidden="true"></i></span>
+                <span class="result-state">ESTIMASI 30 HARI</span>
+            </div>
+            <p class="result-label" id="cost-results-title">Estimasi biaya bulanan</p>
+            <h2 class="result-value"><span class="result-currency">Rp</span> {% if calculation %}{{ calculation.monthly_cost|floatformat:"2g" }}{% else %}—{% endif %}</h2>
+            <p class="result-description">Berdasarkan penggunaan harian dan tarif yang dimasukkan.</p>
+        </article>
+
+        <div class="cost-metric-grid">
+            <article class="cost-metric-card">
+                <span class="cost-metric-icon"><i class="bi bi-sun" aria-hidden="true"></i></span>
+                <p>Estimasi biaya harian</p>
+                <strong>Rp {% if calculation %}{{ calculation.daily_cost|floatformat:"2g" }}{% else %}—{% endif %}</strong>
+            </article>
+            <article class="cost-metric-card">
+                <span class="cost-metric-icon"><i class="bi bi-lightning" aria-hidden="true"></i></span>
+                <p>Energi harian</p>
+                <strong>{% if calculation %}{{ calculation.daily_energy_kwh|floatformat:3 }}{% else %}—{% endif %} <small>kWh</small></strong>
+            </article>
+            <article class="cost-metric-card">
+                <span class="cost-metric-icon"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
+                <p>Energi 30 hari</p>
+                <strong>{% if calculation %}{{ calculation.monthly_energy_kwh|floatformat:3 }}{% else %}—{% endif %} <small>kWh</small></strong>
+            </article>
+            <article class="cost-metric-card">
+                <span class="cost-metric-icon"><i class="bi bi-cash" aria-hidden="true"></i></span>
+                <p>Tarif yang digunakan</p>
+                <strong>Rp {% if calculation %}{{ calculation.tariff_per_kwh|floatformat:"2g" }}{% else %}—{% endif %} <small>/ kWh</small></strong>
+            </article>
+        </div>
+
+        <article class="formula-card">
+            <h3><i class="bi bi-calculator" aria-hidden="true"></i> Metode perhitungan</h3>
+            <p>Energi (kWh) = Daya (kW) × Waktu (jam)</p>
+            <p>Biaya (Rp) = Energi (kWh) × Tarif (Rp/kWh)</p>
+            <span>Estimasi bulanan mengasumsikan penggunaan harian yang sama selama 30 hari.</span>
+        </article>
+    </section>
+</div>
+{% endblock %}

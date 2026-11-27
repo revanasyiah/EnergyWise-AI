@@ -1,0 +1,92 @@
+{% extends 'energy_app/base.html' %}
+
+{% block title %}Rincian Riwayat | EnergyWise AI{% endblock %}
+{% block breadcrumb %}Rincian Riwayat{% endblock %}
+{% block page_kicker %}AKTIVITAS{% endblock %}
+{% block page_title %}Rincian catatan{% endblock %}
+{% block page_description %}Tinjau hasil dan informasi yang digunakan pada perhitungan ini.{% endblock %}
+
+{% block content %}
+<div class="history-detail-toolbar">
+    <a class="history-back-link" href="{% url 'history' %}">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        Kembali ke riwayat
+    </a>
+</div>
+
+<section class="history-detail-hero" aria-label="Hasil perhitungan">
+    <div class="history-detail-hero-top">
+        <span class="history-detail-type">
+            <i class="bi {% if record.prediction_type == 'estimation' %}bi-sliders2{% else %}bi-graph-up-arrow{% endif %}" aria-hidden="true"></i>
+            {% if record.prediction_type == 'estimation' %}Estimasi energi{% else %}Prediksi energi{% endif %}
+        </span>
+        <div class="history-detail-date">
+            <span>Waktu dicatat</span>
+            <strong>{{ record.created_at|date:"j F Y" }}</strong>
+            <small>{{ record.created_at|date:"H:i" }} WIB</small>
+        </div>
+    </div>
+    <div class="history-detail-result">
+        <p>Hasil {% if record.prediction_type == 'estimation' %}estimasi{% else %}prediksi{% endif %}</p>
+        <h2>{{ result_display }} <span>{{ record.result_unit }}</span></h2>
+        <span class="history-detail-record-id">Catatan #{{ record.pk }}</span>
+    </div>
+</section>
+
+<div class="history-detail-grid">
+    <section class="dashboard-panel history-detail-card" aria-labelledby="history-input-title">
+        <div class="history-detail-card-heading">
+            <span class="history-detail-card-icon"><i class="bi bi-sliders" aria-hidden="true"></i></span>
+            <div>
+                <h2 id="history-input-title">Ringkasan masukan</h2>
+                <p>Parameter yang digunakan pada perhitungan.</p>
+            </div>
+        </div>
+        <ul class="history-detail-input-list">
+            {% for item in input_items %}
+            <li><i class="bi bi-check2" aria-hidden="true"></i><span>{{ item }}</span></li>
+            {% empty %}
+            <li class="history-detail-muted">Tidak ada ringkasan masukan yang tersimpan.</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="dashboard-panel history-detail-card" aria-labelledby="history-result-title">
+        <div class="history-detail-card-heading">
+            <span class="history-detail-card-icon"><i class="bi bi-clipboard-data" aria-hidden="true"></i></span>
+            <div>
+                <h2 id="history-result-title">Rincian hasil</h2>
+                <p>Metrik tambahan dari perhitungan ini.</p>
+            </div>
+        </div>
+        <dl class="history-detail-metrics">
+            {% for item in detail_items %}
+            <div>
+                <dt>{{ item.label }}</dt>
+                <dd>{{ item.value }}</dd>
+            </div>
+            {% empty %}
+            <div class="history-detail-empty">Tidak ada metrik tambahan untuk catatan ini.</div>
+            {% endfor %}
+        </dl>
+    </section>
+</div>
+
+<div class="history-detail-actions">
+    <a class="history-back-link" href="{% url 'history' %}">
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        Lihat semua riwayat
+    </a>
+    {% if record.prediction_type == 'estimation' %}
+    <a class="primary-button history-create-link" href="{% url 'estimation' %}">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        Estimasi baru
+    </a>
+    {% else %}
+    <a class="primary-button history-create-link" href="{% url 'prediction' %}">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        Prediksi baru
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

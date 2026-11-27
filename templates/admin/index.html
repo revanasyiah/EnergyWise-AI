@@ -1,0 +1,92 @@
+{% extends "admin/base_site.html" %}
+{% load i18n log %}
+
+{% block content %}
+<div id="content-main" class="app-list">
+<div class="module">
+    <h2>Database aplikasi</h2>
+    <table>
+        <tbody>
+            <tr>
+                <th scope="row">Database aktif</th>
+                <td>{{ energywise_database_engine }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Tabel riwayat energi</th>
+                <td><code>energy_app_energyhistoryrecord</code></td>
+            </tr>
+            <tr>
+                <th scope="row">Jumlah catatan tersimpan</th>
+                <td>{{ energywise_history_count }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <ul class="object-tools">
+        <li>
+            <a href="{% url 'admin:energy_app_energyhistoryrecord_changelist' %}">
+                Buka database riwayat energi
+            </a>
+        </li>
+    </ul>
+</div>
+
+<div class="module">
+    <h2>Riwayat energi terbaru</h2>
+    {% if energywise_recent_history %}
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Waktu</th>
+                <th scope="col">Jenis</th>
+                <th scope="col">Hasil</th>
+                <th scope="col">Masukan</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in energywise_recent_history %}
+            <tr>
+                <td>{{ record.created_at|date:"d M Y, H:i" }}</td>
+                <td>{{ record.get_prediction_type_display }}</td>
+                <td>{{ record.result_value|floatformat:3 }} {{ record.result_unit }}</td>
+                <td>{{ record.input_summary|truncatechars:80 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Belum ada catatan. Hasil estimasi atau prediksi yang disimpan akan tampil di sini.</p>
+    {% endif %}
+</div>
+
+{% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2>{% translate "Recent actions" %}</h2>
+        <h3>{% translate "My actions" %}</h3>
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}
+        <p>{% translate "None available" %}</p>
+        {% else %}
+        <ul class="actionlist">
+            {% for entry in admin_log %}
+            <li class="{% if entry.is_addition %}addlink{% elif entry.is_change %}changelink{% elif entry.is_deletion %}deletelink{% endif %}">
+                {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+                {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                {% endif %}
+                <br>
+                {% if entry.content_type %}
+                <span class="mini quiet">{{ entry.content_type.name|capfirst }}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

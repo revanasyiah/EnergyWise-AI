@@ -1,0 +1,133 @@
+{% extends 'energy_app/base.html' %}
+
+{% block title %}Prediksi | EnergyWise AI{% endblock %}
+{% block breadcrumb %}Prediksi{% endblock %}
+{% block page_kicker %}ALAT ENERGI{% endblock %}
+{% block page_title %}Prediksi konsumsi energi{% endblock %}
+{% block page_description %}Perkirakan penggunaan energi rumah tangga mendatang berdasarkan pengukuran historis.{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+{% endblock %}
+{% block content %}
+<div class="tool-notice" role="note">
+    <span class="tool-notice-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></span>
+    {% if forecast_model_ready %}
+    <p><strong>Model peramalan aktif.</strong> Prediksi dihitung dari dataset historis dan bukan pembacaan penggunaan rumah secara real-time.</p>
+    {% else %}
+    <p><strong>Model peramalan belum dilatih.</strong> Jalankan <code>python manage.py train_energy_forecast</code> untuk melatih model dari dataset rumah tangga.</p>
+    {% endif %}
+</div>
+
+{% if status_message %}
+<div class="form-feedback prediction-feedback" role="status">
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    <span>{{ status_message }}</span>
+</div>
+{% endif %}
+
+<div class="prediction-layout">
+    <div class="prediction-side-column">
+        <section class="tool-card" aria-labelledby="prediction-form-title">
+            <div class="tool-card-heading">
+                <div>
+                    <h2 id="prediction-form-title">Pengaturan prediksi</h2>
+                    <p>Pilih rentang waktu yang ingin diprediksi.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="measurement-field{% if form.horizon.errors %} has-error{% endif %}">
+                    <label class="form-label" for="{{ form.horizon.id_for_label }}">{{ form.horizon.label }}</label>
+                    {{ form.horizon }}
+                    {% if form.horizon.errors %}
+                        <div class="field-errors" role="alert">{{ form.horizon.errors|join:", " }}</div>
+                    {% else %}
+                        <div class="field-help">Pilih salah satu periode prediksi yang tersedia.</div>
+                    {% endif %}
+                </div>
+                <button class="primary-button prediction-button" type="submit" name="action" value="predict">
+                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+                    Prediksi Energi
+                </button>
+            </form>
+        </section>
+
+        <section class="forecast-summary-card" aria-label="Hasil prediksi">
+            <div class="forecast-summary-header">
+                <span class="result-icon"><i class="bi bi-stars" aria-hidden="true"></i></span>
+                <span class="result-state">{% if forecast_result %}HASIL MODEL{% elif forecast_model_ready %}MODEL SIAP{% else %}MODEL BELUM ADA{% endif %}</span>
+            </div>
+            <p class="result-label">Prediksi konsumsi{% if selected_horizon %} · {{ selected_horizon }} jam{% endif %}</p>
+            <h2 class="result-value">{% if forecast_result %}{{ forecast_result.total_kwh|floatformat:3 }}{% else %}—{% endif %} <span>kWh</span></h2>
+            {% if forecast_result %}
+            <p class="result-description">Rata-rata daya prediksi {{ forecast_result.average_kw|floatformat:3 }} kW. MAE uji model: {{ forecast_result.mae|floatformat:3 }} kW.</p>
+            {% endif %}
+            <div class="forecast-change">
+                <span>{% if forecast_result %}{{ forecast_result.change_label }}{% else %}Perubahan dibanding histori{% endif %}</span>
+                <strong>{% if forecast_result.change_percent is not None %}{% if forecast_result.change_percent > 0 %}+{% endif %}{{ forecast_result.change_percent|floatformat:1 }}%{% else %}—{% endif %}</strong>
+            </div>
+        </section>
+    </div>
+
+    <section class="dashboard-panel chart-panel forecast-chart-panel" aria-labelledby="forecast-chart-title">
+        <div class="panel-heading">
+            <div>
+                <h2 id="forecast-chart-title">Konsumsi historis &amp; prediksi</h2>
+                <p>{% if forecast_result %}Data terakhir {{ forecast_result.data_as_of }}; nilai per jam{% else %}Pengukuran sebelumnya dan prediksi mendatang{% endif %}</p>
+            </div>
+            <span class="chart-unit">kW</span>
+        </div>
+        <div class="chart-area forecast-chart-area">
+            <canvas id="forecast-chart" aria-label="{% if chart_data %}Grafik historis dan prediksi konsumsi energi per jam{% else %}Grafik konsumsi historis dan prediksi; menunggu model{% endif %}"></canvas>
+            {% if not chart_data %}
+            <div class="chart-empty-state">
+                <span class="empty-chart-icon"><i class="bi bi-graph-up" aria-hidden="true"></i></span>
+                <strong>Grafik menunggu prediksi</strong>
+                <span>Pilih periode dan tekan Prediksi Energi untuk membuat grafik dari dataset.</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="forecast-legend" aria-label="Seri grafik">
+            <span><i class="legend-dot legend-history" aria-hidden="true"></i>Historis</span>
+            <span><i class="legend-dot legend-prediction" aria-hidden="true"></i>Prediksi</span>
+        </div>
+        {% if forecast_result %}
+        <div class="forecast-ai-action">
+            {% if gemini_configured %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="horizon" value="{{ forecast_result.horizon }}">
+                <button class="primary-button forecast-ai-button" type="submit" name="action" value="analyze">
+                    <i class="bi bi-stars" aria-hidden="true"></i>
+                    Analisis AI pada Grafik
+                </button>
+            </form>
+            <p class="forecast-analysis-caption">Ringkasan data grafik dikirim ke Google Gemini untuk dianalisis.</p>
+            {% else %}
+            <p class="forecast-analysis-caption">Atur GEMINI_API_KEY di file .env untuk mengaktifkan analisis AI.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if forecast_analysis %}
+        <section class="forecast-ai-analysis" aria-label="Analisis AI konsumsi historis dan prediksi" role="status">
+            <h3><i class="bi bi-stars" aria-hidden="true"></i> Analisis AI Gemini</h3>
+            <p><strong>Ringkasan periode</strong>{{ forecast_analysis.summary }}</p>
+            <p><strong>Pola historis</strong>{{ forecast_analysis.historical_pattern }}</p>
+            <p><strong>Pola prediksi</strong>{{ forecast_analysis.forecast_pattern }}</p>
+            <p><strong>Akurasi model</strong>{{ forecast_analysis.model_accuracy }}</p>
+            <p><strong>Rekomendasi</strong>{{ forecast_analysis.recommendation }}</p>
+        </section>
+        {% endif %}
+        {% if analysis_error %}
+        <section class="forecast-ai-analysis forecast-ai-error" aria-label="Kesalahan analisis AI" role="alert">
+            <h3>Analisis AI belum berhasil</h3>
+            <p>{{ analysis_error }}</p>
+        </section>
+        {% endif %}
+    </section>
+</div>
+{% if chart_data %}
+{{ chart_data|json_script:"forecast-chart-data" }}
+{% endif %}
+{% endblock %}

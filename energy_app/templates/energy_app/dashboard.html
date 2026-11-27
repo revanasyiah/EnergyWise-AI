@@ -1,0 +1,166 @@
+{% extends 'energy_app/base.html' %}
+
+{% block title %}Dasbor | EnergyWise AI{% endblock %}
+{% block breadcrumb %}Dasbor{% endblock %}
+{% block page_title %}Selamat datang di EnergyWise AI{% endblock %}
+{% block page_description %}Ringkasan penggunaan listrik dan wawasan energi rumah tangga Anda.{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+{% endblock %}
+{% block content %}
+<section class="dashboard-intro" aria-label="Ringkasan dasbor">
+    <div>
+        <p class="page-kicker">RINGKASAN RUMAH TANGGA</p>
+        <h2>Energi rumah Anda, sekilas</h2>
+        <p>Pantau konsumsi listrik berdasarkan data pengukuran rumah tangga.</p>
+    </div>
+    <div class="dataset-status{% if dashboard_data %} is-connected{% endif %}" role="status">
+        <span class="status-dot" aria-hidden="true"></span>
+        {% if dashboard_data %}
+        <span class="dataset-status-copy">
+            <strong>Dataset terhubung</strong>
+            <small>{{ dataset_period }} · {{ row_count_display }} pembacaan</small>
+        </span>
+        {% else %}
+        <span class="dataset-status-copy">
+            <strong>Dataset tidak terhubung</strong>
+            <small>Data dasbor belum tersedia</small>
+        </span>
+        {% endif %}
+    </div>
+</section>
+
+{% if dataset_error %}
+<div class="dataset-error" role="alert">
+    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+    <span>{{ dataset_error }}</span>
+</div>
+{% endif %}
+
+<section class="stats-grid" aria-label="Statistik energi">
+    <article class="stat-card">
+        <div class="stat-card-top">
+            <span class="stat-icon stat-icon-green"><i class="bi bi-lightning-charge" aria-hidden="true"></i></span>
+            <span class="stat-period">{% if dashboard_data %}SELURUH DATASET{% else %}MENUNGGU DATA{% endif %}</span>
+        </div>
+        <p class="stat-label">Total konsumsi energi</p>
+        <p class="stat-value">{% if dashboard_data %}{{ total_energy_display }}{% else %}—{% endif %} <span>kWh</span></p>
+        <p class="stat-note">Akumulasi daya aktif per jam</p>
+    </article>
+    <article class="stat-card">
+        <div class="stat-card-top">
+            <span class="stat-icon stat-icon-blue"><i class="bi bi-speedometer2" aria-hidden="true"></i></span>
+            <span class="stat-period">{% if dashboard_data %}SELURUH DATASET{% else %}MENUNGGU DATA{% endif %}</span>
+        </div>
+        <p class="stat-label">Daya aktif rata-rata</p>
+        <p class="stat-value">{% if dashboard_data %}{{ average_power_display }}{% else %}—{% endif %} <span>kW</span></p>
+        <p class="stat-note">Rata-rata seluruh jam dengan data valid</p>
+    </article>
+    <article class="stat-card">
+        <div class="stat-card-top">
+            <span class="stat-icon stat-icon-amber"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
+            <span class="stat-period">TARIF BELUM DIATUR</span>
+        </div>
+        <p class="stat-label">Estimasi biaya listrik</p>
+        <p class="stat-value"><span class="stat-currency">Rp</span> —</p>
+        <p class="stat-note">Masukkan tarif di halaman Estimasi Biaya</p>
+    </article>
+    <article class="stat-card">
+        <div class="stat-card-top">
+            <span class="stat-icon stat-icon-violet"><i class="bi bi-clock" aria-hidden="true"></i></span>
+            <span class="stat-period">{% if dashboard_data %}PUNCAK DATASET{% else %}MENUNGGU DATA{% endif %}</span>
+        </div>
+        <p class="stat-label">Waktu konsumsi tertinggi</p>
+        <p class="stat-value stat-value-text">{% if dashboard_data %}{{ peak_hour_display }}{% else %}—{% endif %}</p>
+        <p class="stat-note">{% if dashboard_data %}{{ peak_note }}{% else %}Belum ada data untuk menentukan waktu puncak{% endif %}</p>
+    </article>
+</section>
+
+<section class="charts-grid" aria-label="Grafik energi">
+    <article class="dashboard-panel chart-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Daya aktif per bulan</h2>
+                <p>Rata-rata daya aktif setiap bulan dalam dataset</p>
+            </div>
+            <span class="chart-unit">kW</span>
+        </div>
+        <div class="chart-area chart-area-large">
+            <canvas id="consumption-chart" aria-label="{% if dashboard_data %}Grafik rata-rata daya aktif per bulan{% else %}Grafik daya aktif menunggu dataset{% endif %}"></canvas>
+            {% if not dashboard_data %}
+            <div class="chart-empty-state">
+                <span class="empty-chart-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
+                <strong>Belum ada data pengukuran</strong>
+                <span>Pastikan dataset tersedia dan dapat dibaca untuk menampilkan grafik.</span>
+            </div>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="dashboard-panel chart-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Penggunaan berdasarkan waktu</h2>
+                <p>Rata-rata daya aktif pada setiap jam</p>
+            </div>
+            <span class="chart-unit">kW</span>
+        </div>
+        <div class="chart-area chart-area-large">
+            <canvas id="time-usage-chart" aria-label="{% if dashboard_data %}Grafik daya aktif rata-rata menurut jam{% else %}Grafik penggunaan per jam menunggu dataset{% endif %}"></canvas>
+            {% if not dashboard_data %}
+            <div class="chart-empty-state">
+                <span class="empty-chart-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                <strong>Rincian waktu belum tersedia</strong>
+                <span>Penggunaan per jam tampil setelah data pengukuran dimuat.</span>
+            </div>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-panel energy-summary" aria-labelledby="energy-summary-title">
+    <div class="panel-heading summary-heading">
+        <div>
+            <h2 id="energy-summary-title">Ringkasan penggunaan energi</h2>
+            <p>Akumulasi pembacaan submeter dalam dataset (Wh)</p>
+        </div>
+        <span class="summary-status{% if dashboard_data %} is-connected{% endif %}">
+            <i class="bi {% if dashboard_data %}bi-check-circle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>
+            {% if dashboard_data %}Data terhubung{% else %}Menunggu dataset{% endif %}
+        </span>
+    </div>
+    <div class="meter-list">
+        {% for meter in meter_summaries %}
+        <div class="meter-row">
+            <span class="meter-icon"><i class="bi bi-{{ forloop.counter }}-circle" aria-hidden="true"></i></span>
+            <span class="meter-name">{{ meter.name }}</span>
+            <span class="meter-description">{% if meter.value_display %}Akumulasi pembacaan valid{% else %}Tidak ada pembacaan valid{% endif %}</span>
+            <strong class="meter-value">{% if meter.value_display %}{{ meter.value_display }}{% else %}—{% endif %} <span>Wh</span></strong>
+        </div>
+        {% empty %}
+        <div class="meter-row">
+            <span class="meter-icon"><i class="bi bi-1-circle" aria-hidden="true"></i></span>
+            <span class="meter-name">Submeter 1</span>
+            <span class="meter-description">Menunggu pengukuran dataset</span>
+            <strong class="meter-value">— <span>Wh</span></strong>
+        </div>
+        <div class="meter-row">
+            <span class="meter-icon"><i class="bi bi-2-circle" aria-hidden="true"></i></span>
+            <span class="meter-name">Submeter 2</span>
+            <span class="meter-description">Menunggu pengukuran dataset</span>
+            <strong class="meter-value">— <span>Wh</span></strong>
+        </div>
+        <div class="meter-row">
+            <span class="meter-icon"><i class="bi bi-3-circle" aria-hidden="true"></i></span>
+            <span class="meter-name">Submeter 3</span>
+            <span class="meter-description">Menunggu pengukuran dataset</span>
+            <strong class="meter-value">— <span>Wh</span></strong>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% if chart_data %}
+{{ chart_data|json_script:"dashboard-chart-data" }}
+{% endif %}
+{% endblock %}

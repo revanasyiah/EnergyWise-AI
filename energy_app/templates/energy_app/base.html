@@ -1,0 +1,114 @@
+{% load static %}
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#14213d">
+    <title>{% block title %}EnergyWise AI{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/energywise-mark.svg' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <button class="sidebar-backdrop" type="button" aria-label="Tutup navigasi" tabindex="-1"></button>
+    <div class="app-shell">
+        <aside class="sidebar" id="app-sidebar" aria-label="Navigasi utama">
+            <a class="brand" href="{% url 'dashboard' %}">
+                <span class="brand-mark"><i class="bi bi-lightning-charge-fill" aria-hidden="true"></i></span>
+                <span class="brand-copy">
+                    <span class="brand-name">EnergyWise</span>
+                    <span class="brand-caption">PLATFORM ENERGI AI</span>
+                </span>
+            </a>
+
+            <div class="sidebar-section-label">RUANG KERJA</div>
+            <nav class="sidebar-nav">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                    <i class="bi bi-grid-1x2" aria-hidden="true"></i><span>Dasbor</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'estimation' %}active{% endif %}" href="{% url 'estimation' %}">
+                    <i class="bi bi-sliders2" aria-hidden="true"></i><span>Estimasi</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'prediction' %}active{% endif %}" href="{% url 'prediction' %}">
+                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span>Prediksi</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'cost' %}active{% endif %}" href="{% url 'cost' %}">
+                    <i class="bi bi-receipt" aria-hidden="true"></i><span>Estimasi Biaya</span>
+                </a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'history' or request.resolver_match.url_name == 'history_detail' %}active{% endif %}" href="{% url 'history' %}">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i><span>Riwayat Prediksi</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="sidebar-status">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span>Pratinjau pemantauan</span>
+                    <span class="status-label">PRATINJAU</span>
+                </div>
+                <div class="sidebar-version">Wawasan energi rumah tangga</div>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <header class="topbar">
+                <button class="sidebar-toggle" type="button" aria-label="Buka navigasi" aria-controls="app-sidebar" aria-expanded="false">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <div class="topbar-context">
+                    <span class="topbar-eyebrow">MANAJEMEN ENERGI</span>
+                    <span class="topbar-divider" aria-hidden="true"></span>
+                    <span class="topbar-current">{% block breadcrumb %}Ringkasan{% endblock %}</span>
+                </div>
+                <div class="workspace-menu-wrap">
+                    <button class="topbar-profile" type="button" aria-label="Menu ruang kerja: Rumah tangga saya" aria-expanded="false" aria-controls="workspace-menu">
+                        <span class="profile-avatar"><i class="bi bi-house-door-fill" aria-hidden="true"></i></span>
+                        <span class="profile-name">Rumah tangga saya</span>
+                        <i class="bi bi-chevron-down profile-chevron" aria-hidden="true"></i>
+                    </button>
+                    <section class="workspace-menu" id="workspace-menu" aria-label="Menu ruang kerja" hidden>
+                        <div class="workspace-menu-heading">
+                            <span class="workspace-menu-icon"><i class="bi bi-house-door-fill" aria-hidden="true"></i></span>
+                            <div>
+                                <strong>Ruang kerja EnergyWise</strong>
+                                <span>Rumah tangga saya</span>
+                            </div>
+                        </div>
+                        <p>Label ini menandai ruang kerja lokal Anda, bukan akun atau profil pengguna. Data energi dibaca dari dataset proyek.</p>
+                        <nav class="workspace-menu-links" aria-label="Pintasan ruang kerja">
+                            <a href="{% url 'dashboard' %}">
+                                <i class="bi bi-grid-1x2" aria-hidden="true"></i>
+                                <span>Dasbor energi</span>
+                                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                            </a>
+                            <a href="{% url 'history' %}">
+                                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                <span>Riwayat prediksi</span>
+                                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                            </a>
+                        </nav>
+                    </section>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <section class="page-heading">
+                    <div>
+                        <p class="page-kicker">{% block page_kicker %}ENERGI CERDAS{% endblock %}</p>
+                        <h1>{% block page_title %}Selamat datang di EnergyWise AI{% endblock %}</h1>
+                        <p class="page-description">{% block page_description %}Pantau penggunaan energi rumah tangga dengan lebih mudah.{% endblock %}</p>
+                    </div>
+                    <div class="page-heading-action">{% block page_action %}{% endblock %}</div>
+                </section>
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{% static 'js/main.js' %}" defer></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

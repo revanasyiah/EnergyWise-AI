@@ -1,0 +1,96 @@
+{% extends 'energy_app/base.html' %}
+
+{% block title %}Riwayat Prediksi | EnergyWise AI{% endblock %}
+{% block breadcrumb %}Riwayat Prediksi{% endblock %}
+{% block page_kicker %}AKTIVITAS{% endblock %}
+{% block page_title %}Riwayat prediksi{% endblock %}
+{% block page_description %}Tinjau estimasi energi dan prediksi yang tersimpan.{% endblock %}
+
+{% block content %}
+<section class="history-panel dashboard-panel" aria-labelledby="history-table-title">
+    <div class="history-panel-heading">
+        <div>
+            <h2 id="history-table-title">Catatan prediksi</h2>
+            <p>Hasil estimasi dan prediksi yang tersimpan di EnergyWise AI.</p>
+        </div>
+        <span class="history-record-count"><i class="bi bi-collection" aria-hidden="true"></i> <span data-history-count>{{ history_records|length }}</span> catatan</span>
+    </div>
+
+    <div class="history-toolbar" role="search" aria-label="Cari dan filter riwayat prediksi">
+        <label class="history-search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <span class="visually-hidden">Cari catatan</span>
+            <input type="search" data-history-search placeholder="Cari masukan atau hasil">
+        </label>
+        <label class="history-filter">
+            <span class="visually-hidden">Filter berdasarkan jenis prediksi</span>
+            <select data-history-type>
+                <option value="">Semua jenis</option>
+                <option value="estimation">Estimasi</option>
+                <option value="prediction">Prediksi</option>
+            </select>
+        </label>
+        <label class="history-date-filter">
+            <span class="visually-hidden">Dari tanggal</span>
+            <input type="date" data-history-from>
+        </label>
+        <label class="history-date-filter">
+            <span class="visually-hidden">Sampai tanggal</span>
+            <input type="date" data-history-to>
+        </label>
+        <button class="history-reset" type="button" data-history-reset>
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Atur ulang
+        </button>
+    </div>
+
+    <div class="history-table-wrap">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th scope="col">Tanggal &amp; waktu</th>
+                    <th scope="col">Jenis</th>
+                    <th scope="col">Ringkasan masukan</th>
+                    <th scope="col">Hasil</th>
+                    <th scope="col"><span class="visually-hidden">Rincian</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in history_records %}
+                <tr data-history-row data-type="{{ record.prediction_type|lower }}" data-date="{{ record.created_at|date:'Y-m-d' }}">
+                    <td class="history-date-cell">
+                        <strong>{{ record.created_at|date:"d M Y" }}</strong>
+                        <span>{{ record.created_at|date:"H:i" }}</span>
+                    </td>
+                    <td><span class="history-type-badge">{% if record.prediction_type == 'estimation' %}Estimasi{% elif record.prediction_type == 'prediction' %}Prediksi{% else %}{{ record.prediction_type|capfirst }}{% endif %}</span></td>
+                    <td class="history-input-cell">{{ record.input_summary }}</td>
+                    <td class="history-result-cell">{{ record.result_value|floatformat:3 }} {{ record.result_unit }}</td>
+                    <td>
+                        <a class="table-action" href="{% url 'history_detail' record.pk %}">
+                            Rincian <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr data-history-empty>
+                    <td colspan="5">
+                        <div class="history-empty-state">
+                            <span class="history-empty-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                            <strong>Belum ada catatan prediksi</strong>
+                            <span>Estimasi atau prediksi yang nyata akan ditampilkan di sini setelah disimpan.</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr data-history-no-results hidden>
+                    <td colspan="5">
+                        <div class="history-empty-state compact-empty-state">
+                            <strong>Tidak ada catatan yang cocok</strong>
+                            <span>Ubah atau bersihkan pencarian dan filter Anda.</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
